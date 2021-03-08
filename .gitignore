@@ -1,0 +1,16 @@
+__pycache__/
+*.ipynb_checkpoints
+*.h5
+*.pkl
+*.png
+*.jpg
+
+temp.py
+
+!images/tumor/check_state/train/
+!images/tumor/check_state/valid/
+!images/tumor/check_state/test/
+!images/tumor/plot/train/
+!images/tumor/plot/valid/
+!images/tumor/plot_best/
+!images/tumor/plot_worst/
