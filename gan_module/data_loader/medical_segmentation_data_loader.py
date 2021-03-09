@@ -11,7 +11,7 @@ TEST_DATA_NUM = 20
 
 class DataLoader:
 
-    def __init__(self, dataset_name, img_res=(512, 512), on_memory=False, test=False):
+    def __init__(self, dataset_name, img_res=(512, 512), on_memory=False, code_test=False):
 
         self.img_res = img_res
         self.on_memory = on_memory
@@ -43,7 +43,7 @@ class DataLoader:
             "valid": np.array(glob(mask_data_path_regexp["valid"]))
         }
 
-        if test:
+        if code_test:
             self.image_file_paths["train"] = self.image_file_paths["train"][:TEST_DATA_NUM]
             self.mask_file_paths["train"] = self.mask_file_paths["train"][:TEST_DATA_NUM]
             self.image_file_paths["valid"] = self.image_file_paths["valid"][:TEST_DATA_NUM]

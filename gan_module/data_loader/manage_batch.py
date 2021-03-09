@@ -12,9 +12,9 @@ class BatchQueueManager():
 
         self.__batch_setter = {
             "train": threading.Thread(
-                target=self.__get_batch_setter, args=("train",), daemon=True).start(),
+                target=self.__batch_setter, args=("train",), daemon=True).start(),
             "valid": threading.Thread(
-                target=self.__get_batch_setter, args=("valid",), daemon=True).start()
+                target=self.__batch_setter, args=("valid",), daemon=True).start()
         }
 
     def get_batch(self, data_mode):
@@ -26,7 +26,7 @@ class BatchQueueManager():
 
         return tensor_original_img, tensor_masked_img
 
-    def __get_batch_setter(self, data_mode):
+    def __batch_setter(self, data_mode):
         while True:
             self.__fill_queue(data_mode=data_mode)
 
