@@ -4,7 +4,7 @@ def learning_rate_scheduler(learning_rate, epoch, schedule_list=None, exponent=0
         new_learning_rate = learning_rate * ((epoch + 1) / warm_up_epoch)
     else:
         if schedule_list is None:
-            schedule_list = [30, 125, 200, 275, 350]
+            schedule_list = [30, 100, 175, 250, 325]
         for step, target_epoch in enumerate(schedule_list):
             if target_epoch > epoch:
                 break
