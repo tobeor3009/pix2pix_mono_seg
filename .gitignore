@@ -1,10 +1,15 @@
 __pycache__/
+
+.vscode/
+
 *.ipynb_checkpoints
 *.h5
 *.pkl
 *.png
 *.jpg
+*.csv
 
+temp/
 temp.py
 
 !images/tumor/check_state/train/
