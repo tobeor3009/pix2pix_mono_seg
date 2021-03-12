@@ -67,14 +67,16 @@ def residual_block(
         residual = AveragePooling2D(
             pool_size=stride, strides=stride, padding="same")(x)
         residual = conv2d_bn(
-            residual, filters, kernel_size=1, kernel_initializer=kernel_initializer, strides=1
+            residual, filters, 
+            kernel_size=1, kernel_initializer=kernel_initializer, 
+            strides=1
         )
     else:
         residual = x
         stride = 1
 
     conved = conv2d_bn(
-        x,
+        x=x,
         filters=filters,
         kernel_size=kernel_size,
         kernel_initializer=kernel_initializer,
@@ -83,7 +85,7 @@ def residual_block(
         use_pooling_layer=use_pooling_layer
     )
     conved = conv2d_bn(
-        conved,
+        x=conved,
         filters=filters,
         kernel_size=kernel_size,
         kernel_initializer=kernel_initializer,
@@ -114,7 +116,7 @@ def wide_residual_block(
         residual = AveragePooling2D(
             pool_size=stride, strides=stride, padding="same")(x)
         residual = conv2d_bn(
-            residual, filters,
+            x=residual, filters=filters,
             kernel_size=1, kernel_initializer=kernel_initializer,
             strides=1
         )
@@ -124,7 +126,7 @@ def wide_residual_block(
     conved_stacked = []
     for _ in range(width):
         conved = conv2d_bn(
-            x,
+            x=x,
             filters=filters,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
@@ -133,7 +135,7 @@ def wide_residual_block(
             use_pooling_layer=use_pooling_layer
         )
         conved = conv2d_bn(
-            conved,
+            x=conved,
             filters=filters,
             kernel_size=kernel_size,
             kernel_initializer=kernel_initializer,
@@ -166,20 +168,20 @@ def residual_block_last(
         stride = 2
         residual = AveragePooling2D(pool_size=stride)(x)
         residual = conv2d_bn(
-            residual, filters,
+            x=residual, filters=filters,
             kernel_size=1, kernel_initializer=kernel_initializer,
             strides=1
         )
     else:
         residual = conv2d_bn(
-            x, filters,
+            x=x, filters=filters,
             kernel_size=1, kernel_initializer=kernel_initializer,
             strides=1
         )
         stride = 1
 
     conved = conv2d_bn(
-        x,
+        x=x,
         filters=filters,
         kernel_size=kernel_size,
         kernel_initializer=kernel_initializer,
@@ -187,7 +189,7 @@ def residual_block_last(
         strides=stride,
     )
     conved = conv2d_bn(
-        conved,
+        x=conved,
         filters=filters,
         kernel_size=kernel_size,
         kernel_initializer=kernel_initializer,
@@ -223,7 +225,7 @@ def deconv2d(
     strides = 2 if upsample else 1
     if use_upsampling_layer:
         layer_input = Conv2DTranspose(
-            filters,
+            filters=filters,
             kernel_size=kernel_size,
             strides=1,
             padding="same",
@@ -234,7 +236,7 @@ def deconv2d(
             size=strides, interpolation='nearest')(layer_input)
     else:
         layer_input = Conv2DTranspose(
-            filters,
+            filters=filters,
             kernel_size=kernel_size,
             strides=strides,
             padding="same",
