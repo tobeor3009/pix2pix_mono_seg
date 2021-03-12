@@ -117,14 +117,16 @@ def build_discriminator(input_img_shape, output_img_shape, depth=None,
         kernel_size=(3, 3), kernel_initializer=kernel_initializer,
         weight_decay=1e-4, strides=1,
     )
-    for _ in range(depth):
+    for depth_step in range(depth):
         down_sampled_layer = residual_block(
-            x=down_sampled_layer, filters=discriminator_power,
+            x=down_sampled_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
             kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
             weight_decay=1e-4, downsample=False
         )
         down_sampled_layer = residual_block(
-            x=down_sampled_layer, filters=discriminator_power,
+            x=down_sampled_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
             kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
             weight_decay=1e-4, downsample=True, use_pooling_layer=True
         )
