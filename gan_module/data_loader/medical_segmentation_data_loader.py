@@ -11,9 +11,8 @@ TEST_DATA_NUM = 20
 
 class DataLoader:
 
-    def __init__(self, dataset_name, img_res=(512, 512), on_memory=False, code_test=False):
+    def __init__(self, dataset_name, on_memory=False, code_test=False):
 
-        self.img_res = img_res
         self.on_memory = on_memory
         self.loaded_data = None
         # -----------------
@@ -126,3 +125,23 @@ def imread(path, channel=None):
             image_numpy_array, cv2.COLOR_BGR2RGB)
 
     return image_numpy_array
+
+
+class DataLoaderInfo:
+
+    def __init__(self, dataset_name, data_mode):
+        current_path = os.getcwd()
+        dataset_path = os.path.join(current_path, "datasets", dataset_name)
+
+        data_path_regexp = {
+            "image": os.path.join(dataset_path, data_mode, "image", "*"),
+            "mask": os.path.join(dataset_path, data_mode, "mask", "*")
+        }
+
+        self.image_file_paths = {
+            "image": np.array(glob(data_path_regexp["image"])),
+            "mask": np.array(glob(data_path_regexp["mask"]))
+        }
+
+        self.data_length = len(self.image_file_paths["image"]["train"])
+        self.data_index = np.arange(self.data_length)
