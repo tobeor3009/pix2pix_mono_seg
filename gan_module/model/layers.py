@@ -114,7 +114,9 @@ def wide_residual_block(
         residual = AveragePooling2D(
             pool_size=stride, strides=stride, padding="same")(x)
         residual = conv2d_bn(
-            residual, filters, kernel_size=1, kernel_initializer=kernel_initializer, strides=1
+            residual, filters,
+            kernel_size=1, kernel_initializer=kernel_initializer,
+            strides=1
         )
     else:
         residual = x
@@ -164,11 +166,15 @@ def residual_block_last(
         stride = 2
         residual = AveragePooling2D(pool_size=stride)(x)
         residual = conv2d_bn(
-            residual, filters, kernel_size=1, kernel_initializer=kernel_initializer, strides=1
+            residual, filters,
+            kernel_size=1, kernel_initializer=kernel_initializer,
+            strides=1
         )
     else:
         residual = conv2d_bn(
-            x, filters, kernel_size=1, kernel_initializer=kernel_initializer, strides=1
+            x, filters,
+            kernel_size=1, kernel_initializer=kernel_initializer,
+            strides=1
         )
         stride = 1
 
@@ -205,7 +211,7 @@ def deconv2d(
     layer_input,
     skip_input,
     filters,
-    f_size=4,
+    kernel_size=3,
     kernel_initializer=default_initializer,
     upsample=True,
     use_upsampling_layer=False
@@ -218,7 +224,7 @@ def deconv2d(
     if use_upsampling_layer:
         layer_input = Conv2DTranspose(
             filters,
-            kernel_size=f_size,
+            kernel_size=kernel_size,
             strides=1,
             padding="same",
             kernel_regularizer=l2(0.0),
@@ -229,7 +235,7 @@ def deconv2d(
     else:
         layer_input = Conv2DTranspose(
             filters,
-            kernel_size=f_size,
+            kernel_size=kernel_size,
             strides=strides,
             padding="same",
             kernel_regularizer=l2(0.0),
