@@ -8,6 +8,7 @@ __pycache__/
 *.png
 *.jpg
 *.csv
+*.txt
 
 temp/
 temp.py
