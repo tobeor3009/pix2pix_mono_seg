@@ -1,7 +1,8 @@
 # tensorflow Module
-from tensorflow.keras.models import Model
+from tensorflow.keras import layers
 from tensorflow.keras.layers import Input, GaussianNoise
 from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.models import Model
 from tensorflow.keras.initializers import RandomNormal
 
 # user Module
@@ -96,9 +97,9 @@ def build_generator(
 
 def build_discriminator(input_img_shape, output_img_shape, depth=None,
                         discriminator_power=32,
-                        kernel_initializer=DEFAULT_INITIALIZER):
+                        kernel_initializer=DEFAULT_INITIALIZER,):
 
-    # this model output range [-1, 1]. control by ResidualLastBlock's sigmiod activation
+    # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
 
     original_img = Input(shape=input_img_shape)
     man_or_model_mad_img = Input(shape=output_img_shape)
@@ -135,4 +136,104 @@ def build_discriminator(input_img_shape, output_img_shape, depth=None,
                                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
                                    weight_decay=1e-4, downsample=False,)
 
+    return Model([original_img, man_or_model_mad_img], validity)
+
+
+def build_ensemble_discriminator(input_img_shape, output_img_shape, depth=None,
+                                 discriminator_power=32,
+                                 kernel_initializer=DEFAULT_INITIALIZER,):
+
+    # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
+
+    original_img = Input(shape=input_img_shape)
+    man_or_model_mad_img = Input(shape=output_img_shape)
+    # Concatenate image and conditioning image by channels to produce input
+    combined_imgs = Concatenate(axis=-1)([original_img, man_or_model_mad_img])
+
+    if depth is None:
+        img_size = input_img_shape[0]
+        depth = 0
+        while img_size != 1:
+            img_size //= 2
+            depth += 1
+        depth -= 3
+
+    # ----------------------------
+    #  Define Filter Growing Layer
+    # ----------------------------
+    filter_growing_layer = conv2d_bn(
+        x=combined_imgs, filters=discriminator_power,
+        kernel_size=(3, 3), kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, strides=1,
+    )
+    for depth_step in range(depth):
+        filter_growing_layer = residual_block(
+            x=filter_growing_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=False
+        )
+        filter_growing_layer = residual_block(
+            x=filter_growing_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=True, use_pooling_layer=True
+        )
+
+    filter_growing_validity = residual_block_last(x=filter_growing_layer, filters=1,
+                                                  kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                                                  weight_decay=1e-4, downsample=False,)
+    # ----------------------------
+    #  Define Filter Shrinking Layer
+    # ----------------------------
+    filter_shrinking_layer = conv2d_bn(
+        x=combined_imgs,
+        filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
+        kernel_size=(3, 3), kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, strides=1,
+    )
+    for depth_step in range(depth - 1, -1, -1):
+        filter_shrinking_layer = residual_block(
+            x=filter_shrinking_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=False
+        )
+        filter_shrinking_layer = residual_block(
+            x=filter_shrinking_layer,
+            filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=True, use_pooling_layer=True
+        )
+
+    filter_shrinking_validity = residual_block_last(x=filter_shrinking_layer, filters=1,
+                                                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                                                    weight_decay=1e-4, downsample=False,)
+    # ----------------------------
+    #  Define Filter Fixed Layer
+    # ----------------------------
+    filter_fixed_layer = conv2d_bn(
+        x=combined_imgs, filters=discriminator_power,
+        kernel_size=(3, 3), kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, strides=1,
+    )
+    for depth_step in range(depth):
+        filter_fixed_layer = residual_block(
+            x=filter_fixed_layer,
+            filters=discriminator_power,
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=False
+        )
+        filter_fixed_layer = residual_block(
+            x=filter_fixed_layer,
+            filters=discriminator_power,
+            kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+            weight_decay=1e-4, downsample=True, use_pooling_layer=True
+        )
+
+    filter_fixed_layer = residual_block_last(x=filter_fixed_layer, filters=1,
+                                             kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                                             weight_decay=1e-4, downsample=False,)
+    validity = layers.Average()(
+        [filter_growing_validity, filter_shrinking_validity, filter_fixed_layer])
     return Model([original_img, man_or_model_mad_img], validity)
