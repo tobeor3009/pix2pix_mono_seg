@@ -231,9 +231,9 @@ def build_ensemble_discriminator(input_img_shape, output_img_shape, depth=None,
             weight_decay=1e-4, downsample=True, use_pooling_layer=True
         )
 
-    filter_fixed_layer = residual_block_last(x=filter_fixed_layer, filters=1,
-                                             kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
-                                             weight_decay=1e-4, downsample=False,)
+    filter_fixed_validity = residual_block_last(x=filter_fixed_layer, filters=1,
+                                                kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                                                weight_decay=1e-4, downsample=False,)
     validity = layers.Average()(
-        [filter_growing_validity, filter_shrinking_validity, filter_fixed_layer])
+        [filter_growing_validity, filter_shrinking_validity, filter_fixed_validity])
     return Model([original_img, man_or_model_mad_img], validity)
