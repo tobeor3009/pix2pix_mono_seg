@@ -63,9 +63,56 @@ def build_generator(
         kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
         weight_decay=1e-4, downsample=False
     )
-
+    d4_1 = residual_block(
+        x=d3_2, filters=generator_power * 16,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=True, use_pooling_layer=False
+    )
+    d4_2 = residual_block(
+        x=d4_1, filters=generator_power * 16,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=False
+    )
+    d5_1 = residual_block(
+        x=d4_2, filters=generator_power * 32,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=True, use_pooling_layer=False
+    )
+    d5_2 = residual_block(
+        x=d5_1, filters=generator_power * 32,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=False
+    )
+    d6_1 = residual_block(
+        x=d5_2, filters=generator_power * 64,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=True, use_pooling_layer=False
+    )
+    d6_2 = residual_block(
+        x=d6_1, filters=generator_power * 64,
+        kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+        weight_decay=1e-4, downsample=False
+    )
     # Upsampling
-    u3_2 = deconv2d(d3_2, d3_1, generator_power * 8,
+    u6_2 = deconv2d(d6_2, d6_1, generator_power * 64,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=False,)
+    u6_1 = deconv2d(u6_2, d5_2, generator_power * 32,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=True, use_upsampling_layer=True)
+    u5_2 = deconv2d(u6_1, d5_1, generator_power * 32,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=False,)
+    u5_1 = deconv2d(u5_2, d4_2, generator_power * 16,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=True, use_upsampling_layer=True)
+    u4_2 = deconv2d(u5_1, d4_1, generator_power * 16,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=False,)
+    u4_1 = deconv2d(u4_2, d3_2, generator_power * 8,
+                    kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
+                    upsample=True, use_upsampling_layer=True)
+    u3_2 = deconv2d(u4_1, d3_1, generator_power * 8,
                     kernel_size=KERNEL_SIZE, kernel_initializer=kernel_initializer,
                     upsample=False,)
     u3_1 = deconv2d(u3_2, d2_2, generator_power * 4,
