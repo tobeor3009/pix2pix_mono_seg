@@ -27,7 +27,7 @@ class ImageDrawer:
         os.makedirs(
             f"images/{self.dataset_name}/{self.plot_best_dir_name}", exist_ok=True)
 
-    def sample_images(self, generator, epoch, batch_i):
+    def sample_images(self, generator, epoch, batch_i=None):
 
         train_data_index = np.random.choice(
             self.data_loader.data_length["train"], 3)
@@ -126,8 +126,12 @@ class ImageDrawer:
         fig.set_size_inches(12, 12)
 
         if worst is None:
-            fig.savefig(
-                f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}_{batch_i}.png")
+            if batch_i:
+                fig.savefig(
+                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}_{batch_i}.png")
+            else:
+                fig.savefig(
+                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}.png")
         else:
             if worst:
                 best_or_worst_dir_name = self.plot_worst_dir_name

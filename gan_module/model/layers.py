@@ -6,7 +6,6 @@ from tensorflow.keras.layers import Concatenate
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose
 from tensorflow.keras.layers import MaxPooling2D, AveragePooling2D, UpSampling2D
 from tensorflow.keras.layers import BatchNormalization
-from tensorflow_addons.layers import GroupNormalization
 from tensorflow.keras.layers import LeakyReLU
 from tensorflow.keras.activations import sigmoid, tanh
 from tensorflow.keras.regularizers import l2
@@ -67,8 +66,8 @@ def residual_block(
         residual = AveragePooling2D(
             pool_size=stride, strides=stride, padding="same")(x)
         residual = conv2d_bn(
-            residual, filters, 
-            kernel_size=1, kernel_initializer=kernel_initializer, 
+            residual, filters,
+            kernel_size=1, kernel_initializer=kernel_initializer,
             strides=1
         )
     else:
@@ -223,6 +222,7 @@ def deconv2d(
     """Layers used during upsampling"""
 
     strides = 2 if upsample else 1
+
     if use_upsampling_layer:
         layer_input = Conv2DTranspose(
             filters=filters,
@@ -243,6 +243,14 @@ def deconv2d(
             kernel_regularizer=l2(0.0),
             kernel_initializer=kernel_initializer
         )(layer_input)
+    layer_input = conv2d_bn(
+        x=layer_input,
+        filters=filters,
+        kernel_size=kernel_size,
+        kernel_initializer=kernel_initializer,
+        strides=1,
+    )
+    layer_input = BatchNormalization(axis=-1)(layer_input)
     layer_input = Concatenate()([layer_input, skip_input])
     layer_input = BatchNormalization(axis=-1)(layer_input)
     layer_input = LeakyReLU(NEGATIVE_RATIO)(layer_input)
