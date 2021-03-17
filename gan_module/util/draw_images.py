@@ -1,6 +1,7 @@
 # python basic Module
 import os
 import cv2
+
 # math, plot Module
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,39 +19,34 @@ class ImageDrawer:
         self.plot_best_dir_name = "plot_best"
 
         # make dir
-        os.makedirs(
-            f"images/{self.dataset_name}/{self.plot_dir_name}/train", exist_ok=True)
-        os.makedirs(
-            f"images/{self.dataset_name}/{self.plot_dir_name}/valid", exist_ok=True)
-        os.makedirs(
-            f"images/{self.dataset_name}/{self.plot_worst_dir_name}", exist_ok=True)
-        os.makedirs(
-            f"images/{self.dataset_name}/{self.plot_best_dir_name}", exist_ok=True)
+        os.makedirs(f"images/{self.dataset_name}/{self.plot_dir_name}/train", exist_ok=True)
+        os.makedirs(f"images/{self.dataset_name}/{self.plot_dir_name}/valid", exist_ok=True)
+        os.makedirs(f"images/{self.dataset_name}/{self.plot_worst_dir_name}", exist_ok=True)
+        os.makedirs(f"images/{self.dataset_name}/{self.plot_best_dir_name}", exist_ok=True)
 
     def sample_images(self, generator, epoch, batch_i=None):
 
-        train_data_index = np.random.choice(
-            self.data_loader.data_length["train"], 3)
-        valid_data_index = np.random.choice(
-            self.data_loader.data_length["valid"], 3)
+        train_data_index = np.random.choice(self.data_loader.data_length["train"], 3)
+        valid_data_index = np.random.choice(self.data_loader.data_length["valid"], 3)
 
         train_original_imgs, train_masked_imgs = self.data_loader.get_data(
-            data_mode="train", index=train_data_index)
+            data_mode="train", index=train_data_index
+        )
         valid_original_imgs, valid_masked_imgs = self.data_loader.get_data(
-            data_mode="valid", index=valid_data_index)
+            data_mode="valid", index=valid_data_index
+        )
 
         train_list_of_plot_imgs = self.__get_list_of_plot_images(
-            generator, train_original_imgs, train_masked_imgs)
+            generator, train_original_imgs, train_masked_imgs
+        )
         valid_list_of_plot_imgs = self.__get_list_of_plot_images(
-            generator, valid_original_imgs, valid_masked_imgs)
+            generator, valid_original_imgs, valid_masked_imgs
+        )
 
         self.__draw_images(train_list_of_plot_imgs, epoch, batch_i, train=True)
-        self.__draw_images(valid_list_of_plot_imgs,
-                           epoch, batch_i, train=False)
+        self.__draw_images(valid_list_of_plot_imgs, epoch, batch_i, train=False)
 
-    def draw_worst_and_best(
-        self, original_img, model_made_img, man_made_img, epoch, worst=True
-    ):
+    def draw_worst_and_best(self, original_img, model_made_img, man_made_img, epoch, worst=True):
 
         original_img = original_img[0:1]
         model_made_img = model_made_img[0:1]
@@ -82,15 +78,15 @@ class ImageDrawer:
         plt.close()
 
     def __get_list_of_plot_images(self, generator, original_imgs, masked_imgs):
-
-        model_masked_imgs = generator.predict(
-            original_imgs)[:, :, :, 0]
+        print(original_imgs.shape)
+        print(masked_imgs.shape)
+        print(generator.predict(original_imgs).shape)
+        model_masked_imgs = generator.predict(original_imgs)[:, :, :, 0]
         model_masked_rgb_imgs = []
         masked_rgb_imgs = []
 
         for (model_masked_img, masked_img) in zip(model_masked_imgs, masked_imgs):
-            model_masked_rgb_imgs.append(
-                self.__gray_to_rgb(model_masked_img))
+            model_masked_rgb_imgs.append(self.__gray_to_rgb(model_masked_img))
             masked_rgb_imgs.append(self.__gray_to_rgb(masked_img))
 
         # rescale [-1,1] rgb image to [0,1] iamge
@@ -98,8 +94,7 @@ class ImageDrawer:
         model_masked_rgb_imgs = np.array(model_masked_rgb_imgs)
         masked_rgb_imgs = np.array(masked_rgb_imgs)
 
-        list_of_plot_imgs = np.stack(
-            [original_imgs, model_masked_rgb_imgs, masked_rgb_imgs])
+        list_of_plot_imgs = np.stack([original_imgs, model_masked_rgb_imgs, masked_rgb_imgs])
 
         return list_of_plot_imgs
 
@@ -128,17 +123,20 @@ class ImageDrawer:
         if worst is None:
             if batch_i:
                 fig.savefig(
-                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}_{batch_i}.png")
+                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}_{batch_i}.png"
+                )
             else:
                 fig.savefig(
-                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}.png")
+                    f"images/{self.dataset_name}/{self.plot_dir_name}/{train_or_valid}/{epoch}.png"
+                )
         else:
             if worst:
                 best_or_worst_dir_name = self.plot_worst_dir_name
             else:
                 best_or_worst_dir_name = self.plot_best_dir_name
             fig.savefig(
-                f"images/{self.dataset_name}/{best_or_worst_dir_name}/{train_or_valid}/{epoch}.png")
+                f"images/{self.dataset_name}/{best_or_worst_dir_name}/{train_or_valid}/{epoch}.png"
+            )
         plt.close()
 
     def __gray_to_rgb(self, gray_image):
