@@ -78,9 +78,6 @@ class ImageDrawer:
         plt.close()
 
     def __get_list_of_plot_images(self, generator, original_imgs, masked_imgs):
-        print(original_imgs.shape)
-        print(masked_imgs.shape)
-        print(generator.predict(original_imgs).shape)
         model_masked_imgs = generator.predict(original_imgs)[:, :, :, 0]
         model_masked_rgb_imgs = []
         masked_rgb_imgs = []
