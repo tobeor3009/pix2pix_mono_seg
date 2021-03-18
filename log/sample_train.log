@@ -1,0 +1,150 @@
+{2021-03-18 07:52:31,886 - train - INFO - 
+epoch : 0/325
+discriminator_acces : 0.0
+Mean generator loss : 74.4944076538086
+Max generator loss : 98.57093048095703
+Min generator loss : 27.114700317382812
+Generator loss decrease : 25.505592346191406
+Current lowest generator loss : 0.7449440765380859
+Current Learning_rate : 100
+Elapsed_time : 0:34:18.525792
+{2021-03-18 08:25:22,410 - train - INFO - 
+epoch : 1/325
+discriminator_acces : 0.6987096774193549
+Mean generator loss : 66.6075668334961
+Max generator loss : 97.60968780517578
+Min generator loss : 31.083263397216797
+Generator loss decrease : 7.8868408203125
+Current lowest generator loss : 0.8941284418106079
+Current Learning_rate : 74.4944076538086
+Elapsed_time : 1:07:09.050006
+{2021-03-18 09:48:27,686 - train - INFO - 
+epoch : 0/325
+discriminator_acces : 0.0
+Mean generator loss : 74.71595764160156
+Max generator loss : 98.565185546875
+Min generator loss : 26.789173126220703
+Generator loss decrease : 25.284042358398438
+Current lowest generator loss : 0.7471595764160156
+Current Learning_rate : 100
+Elapsed_time : 0:34:26.424866
+{2021-03-18 10:30:00,180 - train - INFO - 
+epoch : 0/325
+discriminator_acces : 0.0
+Mean generator loss : 74.2547607421875
+Max generator loss : 98.56170654296875
+Min generator loss : 26.61204719543457
+Generator loss decrease : 25.7452392578125
+Current lowest generator loss : 0.742547607421875
+Current Learning_rate : 100
+Elapsed_time : 0:14:40.070267
+{2021-03-18 10:44:06,913 - train - INFO - 
+epoch : 1/325
+discriminator_acces : 0.6967741935483871
+Mean generator loss : 99.17567443847656
+Max generator loss : 99.21625518798828
+Min generator loss : 99.16751098632812
+Generator loss decrease : -24.920913696289062
+Current lowest generator loss : 1.33561372756958
+Current Learning_rate : 74.2547607421875
+Elapsed_time : 0:28:46.803697
+{2021-03-18 11:07:39,820 - train - INFO - 
+epoch : 0/325
+discriminator_acces : 0.0
+Mean generator loss : 74.40970611572266
+Max generator loss : 98.57799530029297
+Min generator loss : 26.57362937927246
+Generator loss decrease : 25.590293884277344
+Current lowest generator loss : 0.7440970611572265
+Current Learning_rate : 100
+Elapsed_time : 0:15:05.215877
+{2021-03-18 11:21:52,186 - train - INFO - 
+epoch : 1/325
+discriminator_acces : 0.6967741935483871
+Mean generator loss : 66.07537078857422
+Max generator loss : 98.22489929199219
+Min generator loss : 27.447376251220703
+Generator loss decrease : 8.334335327148438
+Current lowest generator loss : 0.8879939913749695
+Current Learning_rate : 74.40970611572266
+Elapsed_time : 0:29:17.582635
+{2021-03-18 11:34:45,709 - train - INFO - 
+epoch : 2/325
+discriminator_acces : 0.30709677419354836
+Mean generator loss : 54.832828521728516
+Max generator loss : 97.01888275146484
+Min generator loss : 19.091793060302734
+Generator loss decrease : 11.242542266845703
+Current lowest generator loss : 0.8298527598381042
+Current Learning_rate : 66.07537078857422
+Elapsed_time : 0:42:11.105262
+{2021-03-18 11:48:18,315 - train - INFO - 
+epoch : 3/325
+discriminator_acces : 0.0
+Mean generator loss : 46.929378509521484
+Max generator loss : 93.62174224853516
+Min generator loss : 17.35605812072754
+Generator loss decrease : 7.903450012207031
+Current lowest generator loss : 0.8558627963066101
+Current Learning_rate : 54.832828521728516
+Elapsed_time : 0:55:43.711138
+{2021-03-18 12:02:22,978 - train - INFO - 
+epoch : 4/325
+discriminator_acces : 0.0
+Mean generator loss : 43.350242614746094
+Max generator loss : 91.52818298339844
+Min generator loss : 17.34492301940918
+Generator loss decrease : 3.5791358947753906
+Current lowest generator loss : 0.9237335920333862
+Current Learning_rate : 46.929378509521484
+Elapsed_time : 1:09:48.373596
+{2021-03-18 12:16:28,367 - train - INFO - 
+epoch : 5/325
+discriminator_acces : 0.0
+Mean generator loss : 41.8963737487793
+Max generator loss : 91.2447738647461
+Min generator loss : 15.893052101135254
+Generator loss decrease : 1.4538688659667969
+Current lowest generator loss : 0.966462254524231
+Current Learning_rate : 43.350242614746094
+Elapsed_time : 1:23:53.762956
+{2021-03-18 12:30:35,800 - train - INFO - 
+epoch : 6/325
+discriminator_acces : 0.0
+Mean generator loss : 40.75318908691406
+Max generator loss : 85.96012878417969
+Min generator loss : 15.854415893554688
+Generator loss decrease : 1.1431846618652344
+Current lowest generator loss : 0.9727140069007874
+Current Learning_rate : 41.8963737487793
+Elapsed_time : 1:38:01.196575
+{2021-03-18 12:44:43,387 - train - INFO - 
+epoch : 7/325
+discriminator_acces : 0.46
+Mean generator loss : 40.16409683227539
+Max generator loss : 86.43402862548828
+Min generator loss : 16.85221290588379
+Generator loss decrease : 0.5890922546386719
+Current lowest generator loss : 0.9855448603630066
+Current Learning_rate : 40.75318908691406
+Elapsed_time : 1:52:08.783662
+{2021-03-18 12:58:02,591 - train - INFO - 
+epoch : 8/325
+discriminator_acces : 0.5432258064516129
+Mean generator loss : 39.51466369628906
+Max generator loss : 86.88111877441406
+Min generator loss : 14.926929473876953
+Generator loss decrease : 0.6494331359863281
+Current lowest generator loss : 0.9838305115699768
+Current Learning_rate : 40.16409683227539
+Elapsed_time : 2:05:27.987609
+{2021-03-18 13:11:19,204 - train - INFO - 
+epoch : 9/325
+discriminator_acces : 0.0
+Mean generator loss : 38.504058837890625
+Max generator loss : 84.3639907836914
+Min generator loss : 16.025165557861328
+Generator loss decrease : 1.0106048583984375
+Current lowest generator loss : 0.9744245409965515
+Current Learning_rate : 39.51466369628906
+Elapsed_time : 2:18:44.600095

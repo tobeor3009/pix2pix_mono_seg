@@ -14,6 +14,8 @@ __pycache__/
 temp/
 temp.py
 
+!sample_train.log
+
 !images/tumor/check_state/train/
 !images/tumor/check_state/valid/
 !images/tumor/check_state/test/
