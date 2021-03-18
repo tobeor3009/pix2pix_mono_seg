@@ -9,6 +9,7 @@ __pycache__/
 *.jpg
 *.csv
 *.txt
+*.log
 
 temp/
 temp.py
