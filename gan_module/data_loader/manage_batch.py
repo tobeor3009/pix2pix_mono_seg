@@ -12,7 +12,7 @@ class BatchQueueManager:
         self.on_memory = on_memory
         self.__batch_queue = {"train": Queue(), "valid": Queue()}
 
-        self.__batch_setter = {
+        self.__batch_setter_dict = {
             "train": threading.Thread(
                 target=self.__batch_setter, args=("train",), daemon=True
             ).start(),
@@ -62,4 +62,3 @@ class BatchQueueManager:
         )
         self.__batch_queue[data_mode].put(batch_tuple)
         self.__batch_queue[data_mode].join()
-
