@@ -1,14 +1,15 @@
+import os
+import csv
 import logging
 from datetime import datetime
 
 DATE_FORMAT = "%Y-%m-%d %H.%M"
+TRAIN_HISTORY_CSV = "train_history.csv"
 
 
 class TrainLogger:
     def __init__(self):
         self.logger = None
-        self.__define_logger()
-
         self.log_info_dict = {
             "Epoch": "",
             "Discriminator_acces": "",
@@ -20,14 +21,15 @@ class TrainLogger:
             "Current Learning_rate": "",
             "Elapsed_time": "",
         }
-
         self.history_info_dict = {
-            "Epoch": [],
-            "Discriminator_acces": [],
-            "Generator loss": [],
-            "Train_f1_loss": [],
-            "Valid_f1_loss": [],
+            "Epoch": "",
+            "Discriminator_acces": "",
+            "Generator loss": "",
+            "Train_f1_loss": "",
+            "Valid_f1_loss": "",
         }
+        self.__define_logger()
+        self.__define_history()
 
     def write_log(self, *args):
         # setting args to log_info_dict
@@ -39,15 +41,12 @@ class TrainLogger:
             message.append(f"{key} : {value}")
         self.logger.info("\n".join(message))
 
-    def add_histroy(self, *args):
+    def write_histroy(self, *args):
         # setting args to history_info_dict
         for key, value in zip(self.history_info_dict, args):
             self.history_info_dict[key] = value
 
-        message = []
-        for key, value in self.history_info_dict.items():
-            message.append(f"{key} : {value}")
-        self.logger.info("\n".join(message))
+        self.history_writer(self.history_info_dict.values())
 
     def __define_logger(self):
 
@@ -64,3 +63,10 @@ class TrainLogger:
         logger.addHandler(stream_handler)
         logger.addHandler(file_handler)
         self.logger = logger
+
+    def __define_history(self):
+        file_exists = os.path.exists(TRAIN_HISTORY_CSV)
+        history_csv_file = open(TRAIN_HISTORY_CSV, "w", newline="")
+        self.history_writer = csv.writer(history_csv_file)
+        if file_exists:
+            self.history_writer.writerow(self.history_info_dict.keys())
