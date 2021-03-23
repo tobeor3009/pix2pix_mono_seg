@@ -142,12 +142,11 @@ def deconv2d(
     """Layers used during upsampling"""
 
     strides = 2 if upsample else 1
-
+    # skip_input_channel = skip_input[-1]
     if use_upsampling_layer:
-        # transform_gate_output = transform_gate(layer_input, "upsampling")
         layer_input = UpSampling2D(size=strides, interpolation="nearest")(layer_input)
+        # transform_gate_output = transform_gate(layer_input, filters + skip_input_channel)
     else:
-        # transform_gate_output = transform_gate(layer_input, "same")
         layer_input = Conv2DTranspose(
             filters=filters,
             kernel_size=kernel_size,
@@ -156,6 +155,7 @@ def deconv2d(
             kernel_regularizer=l2(0.0),
             kernel_initializer=kernel_initializer,
         )(layer_input)
+        # transform_gate_output = transform_gate(layer_input, filters + skip_input_channel)
     output = conv2d_bn(
         x=layer_input,
         filters=filters,
