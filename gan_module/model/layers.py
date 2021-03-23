@@ -42,7 +42,8 @@ def conv2d_bn(
         kernel_size=kernel_size,
         strides=cnn_strides,
         padding="same",
-        use_bias=True,
+        # Batch Normalization Beta replace Conv2D Bias
+        use_bias=False,
         kernel_regularizer=l2(weight_decay),
         kernel_initializer=kernel_initializer,
     )(x)
