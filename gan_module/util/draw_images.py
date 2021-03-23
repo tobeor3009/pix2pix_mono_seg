@@ -65,7 +65,7 @@ class ImageDrawer:
         fig.set_size_inches(12, 12)
         cnt = 0
         for i in range(r):
-            for j in range(c):
+            for _ in range(c):
                 axs[i].imshow(gen_imgs[cnt])
                 axs[i].set_title(titles[i])
                 axs[i].axis("off")
