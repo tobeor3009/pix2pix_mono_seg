@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Concatenate
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose
 from tensorflow.keras.layers import MaxPooling2D, AveragePooling2D, UpSampling2D
 from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import LeakyReLU, Dense
+from tensorflow.keras.layers import Dense, LeakyReLU
 from tensorflow.keras.activations import sigmoid, tanh
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.initializers import RandomNormal
@@ -50,7 +50,7 @@ def conv2d_bn(
     layer = BatchNormalization(axis=-1)(layer)
     layer = LeakyReLU(NEGATIVE_RATIO)(layer)
     if use_pooling_layer:
-        layer = MaxPooling2D(pool_size=pooling_stride, strides=pooling_stride, padding="same")(
+        layer = AveragePooling2D(pool_size=pooling_stride, strides=pooling_stride, padding="same")(
             layer
         )
     return layer
@@ -106,7 +106,7 @@ def residual_block(
     )
     output = layers.add([conved, residual])
     output = BatchNormalization(axis=-1, gamma_initializer=GAMMA_INITIALIZER)(output)
-    output = LeakyReLU(NEGATIVE_RATIO)(output)
+    output = LeakyReLU(0.25)(output)
     return output * transform_gate_output + residual * (1 - transform_gate_output)
 
 
@@ -143,33 +143,38 @@ def deconv2d(
     """Layers used during upsampling"""
 
     strides = 2 if upsample else 1
-    # skip_input_channel = skip_input[-1]
+    skip_input_channel = skip_input.shape[-1]
     if use_upsampling_layer:
         layer_input = UpSampling2D(size=strides, interpolation="nearest")(layer_input)
-        # transform_gate_output = transform_gate(layer_input, filters + skip_input_channel)
+        layer_input = conv2d_bn(
+            x=layer_input,
+            filters=filters,
+            kernel_size=kernel_size,
+            kernel_initializer=kernel_initializer,
+            strides=1,
+        )
     else:
         layer_input = Conv2DTranspose(
             filters=filters,
             kernel_size=kernel_size,
             strides=strides,
             padding="same",
+            # Batch Normalization Beta replace Conv2D Bias
+            use_bias=False,
             kernel_regularizer=l2(0.0),
             kernel_initializer=kernel_initializer,
         )(layer_input)
-        # transform_gate_output = transform_gate(layer_input, filters + skip_input_channel)
+    layer_input = BatchNormalization(axis=-1)(layer_input)
+    concatenated = Concatenate()([layer_input, skip_input])
+    transform_gate_output = transform_gate(concatenated, filters + skip_input_channel)
     output = conv2d_bn(
-        x=layer_input,
-        filters=filters,
-        kernel_size=kernel_size,
+        x=concatenated,
+        filters=filters + skip_input_channel,
         kernel_initializer=kernel_initializer,
+        kernel_size=kernel_size,
         strides=1,
     )
-    output = BatchNormalization(axis=-1)(output)
-    output = Concatenate()([output, skip_input])
-    output = BatchNormalization(axis=-1)(output)
-    output = LeakyReLU(NEGATIVE_RATIO)(output)
-    return output
-    # return output * transform_gate_output + layer_input * (1 - transform_gate_output)
+    return output * transform_gate_output + concatenated * (1 - transform_gate_output)
 
 
 def transform_gate(x, highway_dim):
