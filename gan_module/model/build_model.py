@@ -9,7 +9,6 @@ from tensorflow.keras.initializers import RandomNormal
 # user Module
 from .layers import conv2d_bn, residual_block, residual_block_last, deconv2d
 
-DEFAULT_INITIALIZER = RandomNormal(mean=0.0, stddev=0.02)
 KERNEL_SIZE = (3, 3)
 WEIGHT_DECAY = 1e-2
 
@@ -19,7 +18,6 @@ def build_generator(
     output_channels=4,
     depth=None,
     generator_power=32,
-    kernel_initializer=DEFAULT_INITIALIZER,
 ):
     """U-Net Generator"""
     # this model output range [-1, 1]. control by ResidualLastBlock's sigmiod activation
@@ -42,7 +40,6 @@ def build_generator(
         x=input_img_noised,
         filters=generator_power,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=1e-4,
         strides=(1, 1),
     )
@@ -50,55 +47,45 @@ def build_generator(
         x=fix_shape_layer_1,
         filters=generator_power,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=1e-4,
         downsample=False,
     )
     down_sample_layers.append((fix_shape_layer_1, fix_shape_layer_2))
+    # Downsampling
     for depth_step in range(depth):
-        # Downsampling
         down_sample_layer = residual_block(
             x=fix_shape_layer_2,
             filters=generator_power * (2 ** depth_step),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=1e-4,
             downsample=True,
             use_pooling_layer=True,
         )
-        print(f"{depth_step}:{down_sample_layer.shape}")
         fix_shape_layer_1 = residual_block(
             x=down_sample_layer,
             filters=generator_power * (2 ** depth_step),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=1e-4,
             downsample=False,
         )
-        print(f"{depth_step}:{fix_shape_layer_1.shape}")
         fix_shape_layer_2 = residual_block(
             x=fix_shape_layer_1,
             filters=generator_power * (2 ** depth_step),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=1e-4,
             downsample=False,
         )
-        print(f"{depth_step}:{fix_shape_layer_2.shape}")
-        layer_collection = (down_sample_layer, fix_shape_layer_1, fix_shape_layer_2)
+        layer_collection = (down_sample_layer,
+                            fix_shape_layer_1, fix_shape_layer_2)
         down_sample_layers.append(layer_collection)
+    # upsampling
     for depth_step in range(depth, 0, -1):
-        print(depth_step)
-        print(f"{depth_step}:{down_sample_layers[depth_step][2].shape}")
-        print(f"{depth_step}:{down_sample_layers[depth_step][1].shape}")
-        print(f"{depth_step}:{down_sample_layers[depth_step][0].shape}")
         if depth_step == depth:
             fix_shape_layer_1 = deconv2d(
                 down_sample_layers[depth_step][2],
                 down_sample_layers[depth_step][1],
                 generator_power * (2 ** depth_step),
                 kernel_size=KERNEL_SIZE,
-                kernel_initializer=kernel_initializer,
                 upsample=False,
             )
         else:
@@ -107,38 +94,31 @@ def build_generator(
                 down_sample_layers[depth_step][1],
                 generator_power * (2 ** depth_step),
                 kernel_size=KERNEL_SIZE,
-                kernel_initializer=kernel_initializer,
                 upsample=False,
             )
-        print(f"{depth_step}:{fix_shape_layer_1.shape}")
         fix_shape_layer_2 = deconv2d(
             fix_shape_layer_1,
             down_sample_layers[depth_step][2],
             generator_power * (2 ** depth_step),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             upsample=False,
         )
-        print(f"{depth_step}:{fix_shape_layer_2.shape}")
         upsampling_layer = deconv2d(
             fix_shape_layer_2,
             down_sample_layers[depth_step - 1][0],
             generator_power * (2 ** (depth_step - 1)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             upsample=True,
             use_upsampling_layer=False,
         )
-        print(f"{depth_step}:{upsampling_layer.shape}")
+    # control output_channels
     output_layer = residual_block_last(
         x=upsampling_layer,
         filters=output_channels,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
     )
-    print(output_layer.shape)
     return Model(input_img, output_layer)
 
 
@@ -147,7 +127,6 @@ def build_discriminator(
     output_img_shape,
     depth=None,
     discriminator_power=32,
-    kernel_initializer=DEFAULT_INITIALIZER,
 ):
 
     # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
@@ -168,7 +147,6 @@ def build_discriminator(
         x=combined_imgs,
         filters=discriminator_power,
         kernel_size=(3, 3),
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         strides=1,
     )
@@ -177,7 +155,6 @@ def build_discriminator(
             x=down_sampled_layer,
             filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -185,7 +162,6 @@ def build_discriminator(
             x=down_sampled_layer,
             filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -193,7 +169,6 @@ def build_discriminator(
             x=down_sampled_layer,
             filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
@@ -203,7 +178,6 @@ def build_discriminator(
         x=down_sampled_layer,
         filters=1,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
     )
@@ -216,7 +190,6 @@ def build_classifier(
     classfier_power=32,
     depth=None,
     num_class=2,
-    kernel_initializer=DEFAULT_INITIALIZER,
 ):
 
     # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
@@ -234,7 +207,6 @@ def build_classifier(
         x=input_img,
         filters=classfier_power,
         kernel_size=(3, 3),
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         strides=1,
     )
@@ -243,7 +215,6 @@ def build_classifier(
             x=down_sampled_layer,
             filters=classfier_power * (2 ** (depth_step // 4)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -251,7 +222,6 @@ def build_classifier(
             x=down_sampled_layer,
             filters=classfier_power * (2 ** (depth_step // 4)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -259,17 +229,18 @@ def build_classifier(
             x=down_sampled_layer,
             filters=classfier_power * (2 ** (depth_step // 4)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
         )
     # (BATCH_SIZE, 32, 32, Filters)
-    output = GlobalMaxPooling2D()(down_sampled_layer)
+    output = GlobalAveragePooling2D()(down_sampled_layer)
     output = Dense(units=dense_unit)(output)
     output = BatchNormalization(axis=-1)(output)
     # (BATCH_SIZE, 1024)
-    output = Dense(units=num_class, activation="sigmoid", kernel_initializer="he_normal")(output)
+    output = Dense(units=num_class,
+                   activation="sigmoid",
+                   kernel_initializer="glorot_uniform")(output)
     # (BATCH_SIZE, NUM_CLASS)
     return Model(input_img, outputs=output)
 
@@ -279,7 +250,6 @@ def build_ensemble_discriminator(
     output_img_shape,
     depth=None,
     discriminator_power=32,
-    kernel_initializer=DEFAULT_INITIALIZER,
 ):
 
     # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
@@ -304,7 +274,6 @@ def build_ensemble_discriminator(
         x=combined_imgs,
         filters=discriminator_power,
         kernel_size=(3, 3),
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         strides=1,
     )
@@ -313,7 +282,6 @@ def build_ensemble_discriminator(
             x=filter_growing_layer,
             filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -321,7 +289,6 @@ def build_ensemble_discriminator(
             x=filter_growing_layer,
             filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
@@ -331,7 +298,6 @@ def build_ensemble_discriminator(
         x=filter_growing_layer,
         filters=1,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
     )
@@ -342,7 +308,6 @@ def build_ensemble_discriminator(
         x=combined_imgs,
         filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
         kernel_size=(3, 3),
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         strides=1,
     )
@@ -351,7 +316,6 @@ def build_ensemble_discriminator(
             x=filter_shrinking_layer,
             filters=discriminator_power * (2 ** ((depth_step + 2) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -359,7 +323,6 @@ def build_ensemble_discriminator(
             x=filter_shrinking_layer,
             filters=discriminator_power * (2 ** ((depth_step + 1) // 2)),
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
@@ -369,7 +332,6 @@ def build_ensemble_discriminator(
         x=filter_shrinking_layer,
         filters=1,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
     )
@@ -380,7 +342,6 @@ def build_ensemble_discriminator(
         x=combined_imgs,
         filters=discriminator_power,
         kernel_size=(3, 3),
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         strides=1,
     )
@@ -389,7 +350,6 @@ def build_ensemble_discriminator(
             x=filter_fixed_layer,
             filters=discriminator_power,
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
         )
@@ -397,7 +357,6 @@ def build_ensemble_discriminator(
             x=filter_fixed_layer,
             filters=discriminator_power,
             kernel_size=KERNEL_SIZE,
-            kernel_initializer=kernel_initializer,
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
@@ -407,7 +366,6 @@ def build_ensemble_discriminator(
         x=filter_fixed_layer,
         filters=1,
         kernel_size=KERNEL_SIZE,
-        kernel_initializer=kernel_initializer,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
     )
