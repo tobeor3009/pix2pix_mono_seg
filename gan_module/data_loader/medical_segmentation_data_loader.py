@@ -112,12 +112,13 @@ class DataLoader:
     def __get_generator_of_processed_imgs(self, data_mode):
         image_paths = self.image_file_paths[data_mode]
         mask_paths = self.mask_file_paths[data_mode]
-        for image_path, mask_path in zip(image_paths, mask_paths):
-            input_image = imread(image_path, channel="bgr")
-            output_image = imread(mask_path)
-            input_image = input_image / 127.5 - 1.0
-            output_image = np.round(output_image / 255)
-            yield input_image, output_image
+        while True:
+            for image_path, mask_path in zip(image_paths, mask_paths):
+                input_image = imread(image_path, channel="bgr")
+                output_image = imread(mask_path)
+                input_image = input_image / 127.5 - 1.0
+                output_image = np.round(output_image / 255)
+                yield input_image, output_image
 
 
 def imread(path, channel=None):
@@ -133,7 +134,7 @@ def imread(path, channel=None):
 
 
 class DataLoaderInfo:
-    def _init_(self, dataset_name, data_mode):
+    def __init__(self, dataset_name, data_mode):
         current_path = os.getcwd()
         dataset_path = os.path.join(current_path, "datasets", dataset_name)
         data_path_regexp = {
