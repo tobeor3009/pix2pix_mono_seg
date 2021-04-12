@@ -1,7 +1,7 @@
 # tensorflow Module
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Input, GaussianNoise, GaussianDropout
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, GlobalMaxPooling2D
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, GlobalMaxPooling2D, Dropout
 from tensorflow.keras.layers import Concatenate, Flatten, BatchNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras.initializers import RandomNormal
@@ -42,6 +42,7 @@ def build_generator(
         kernel_size=KERNEL_SIZE,
         weight_decay=1e-4,
         strides=(1, 1),
+        activation="relu"
     )
     fix_shape_layer_2 = residual_block(
         x=fix_shape_layer_1,
@@ -49,6 +50,7 @@ def build_generator(
         kernel_size=KERNEL_SIZE,
         weight_decay=1e-4,
         downsample=False,
+        activation="relu"
     )
     down_sample_layers.append((fix_shape_layer_1, fix_shape_layer_2))
     # Downsampling
@@ -60,6 +62,7 @@ def build_generator(
             weight_decay=1e-4,
             downsample=True,
             use_pooling_layer=True,
+            activation="relu"
         )
         fix_shape_layer_1 = residual_block(
             x=down_sample_layer,
@@ -67,6 +70,7 @@ def build_generator(
             kernel_size=KERNEL_SIZE,
             weight_decay=1e-4,
             downsample=False,
+            activation="tanh"
         )
         fix_shape_layer_2 = residual_block(
             x=fix_shape_layer_1,
@@ -74,6 +78,7 @@ def build_generator(
             kernel_size=KERNEL_SIZE,
             weight_decay=1e-4,
             downsample=False,
+            activation="relu"
         )
         layer_collection = (down_sample_layer,
                             fix_shape_layer_1, fix_shape_layer_2)
@@ -118,6 +123,7 @@ def build_generator(
         kernel_size=KERNEL_SIZE,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
+        activation="sigmoid",
     )
     return Model(input_img, output_layer)
 
@@ -157,6 +163,7 @@ def build_discriminator(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
+            activation="relu"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -164,6 +171,7 @@ def build_discriminator(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
+            activation="tanh"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -172,6 +180,7 @@ def build_discriminator(
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
+            activation="relu"
         )
 
     validity = residual_block_last(
@@ -180,6 +189,7 @@ def build_discriminator(
         kernel_size=KERNEL_SIZE,
         weight_decay=WEIGHT_DECAY,
         downsample=False,
+        activation="sigmoid"
     )
 
     return Model([original_img, man_or_model_mad_img], validity)
@@ -195,7 +205,7 @@ def build_classifier(
     # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
 
     input_img = Input(shape=input_img_shape)
-    dense_unit = input_img_shape[0]
+    dense_unit = input_img_shape[0] * input_img_shape[1]
     if depth is None:
         img_size = input_img_shape[0]
         depth = 0
@@ -217,6 +227,7 @@ def build_classifier(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
+            activation="relu"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -224,6 +235,7 @@ def build_classifier(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
+            activation="tanh"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -232,16 +244,19 @@ def build_classifier(
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
+            activation="relu"
         )
     # (BATCH_SIZE, 32, 32, Filters)
     output = GlobalAveragePooling2D()(down_sampled_layer)
-    output = Dense(units=dense_unit)(output)
-    output = BatchNormalization(axis=-1)(output)
     # (BATCH_SIZE, 1024)
+    output = Dense(units=dense_unit, activation="relu")(output)
+    output = Dropout(0.5)(output)
+    output = Dense(units=dense_unit, activation="relu")(output)
+    output = Dropout(0.5)(output)
+    # (BATCH_SIZE, NUM_CLASS)
     output = Dense(units=num_class,
                    activation="sigmoid",
                    kernel_initializer="glorot_uniform")(output)
-    # (BATCH_SIZE, NUM_CLASS)
     return Model(input_img, outputs=output)
 
 
