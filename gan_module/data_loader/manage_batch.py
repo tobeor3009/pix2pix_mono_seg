@@ -35,8 +35,8 @@ class BatchQueueManager:
             self.__fill_queue(data_mode=data_mode)
 
     def __fill_queue(self, data_mode):
-        batch_input_img = np.empty((self.batch_size, *self.train_class.input_img_shape))
-        batch_output_img = np.empty((self.batch_size, *self.train_class.output_img_shape))
+        batch_input_img = np.empty((self.batch_size, *self.train_class.input_img_shape), dtype=np.float32)
+        batch_output_img = np.empty((self.batch_size, *self.train_class.output_img_shape), dtype=np.float32)
 
         if self.on_memory:
             iter_object = enumerate(
@@ -55,6 +55,9 @@ class BatchQueueManager:
                 self.__batch_queue[data_mode].join()
             batch_input_img[index % self.batch_size] = input_img
             batch_output_img[index % self.batch_size] = output_img
+
+        batch_input_img = batch_input_img[:index % self.batch_size + 1]
+        batch_output_img = batch_output_img[:index % self.batch_size + 1]
         # push last data to queue
         batch_tuple = (
             batch_input_img.copy(),

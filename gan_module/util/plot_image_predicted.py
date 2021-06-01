@@ -28,7 +28,6 @@ mask_path_list = [os.path.join(
     dataset_path, "mask", f'{index}.png') for index in range(train_data_length)]
 
 batch_num = train_data_length // batch_size
-progressbar = display(progress(0, batch_num), display_id=True)
 
 assert train_data_length % batch_size == 0
 
@@ -85,8 +84,6 @@ for batch_index in range(batch_num):
         fig.savefig(
             f"images/tumor/check_state/{mode}/{current_f1_score:.3f}_{current_index}.png")
         plt.close()
-
-    progressbar.update(progress(batch_index + 1, batch_num))
 
 test_f1_scores = [predict_info['f1_score']
                   for predict_info in test_predict_info]

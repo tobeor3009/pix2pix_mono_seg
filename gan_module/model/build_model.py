@@ -7,7 +7,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.initializers import RandomNormal
 
 # user Module
-from .layers import conv2d_bn, residual_block, residual_block_last, deconv2d
+from .layers import conv2d_bn, residual_block, residual_block_last, deconv2d, deconv2d_simple
 
 KERNEL_SIZE = (3, 3)
 WEIGHT_DECAY = 1e-2
@@ -20,7 +20,6 @@ def build_generator(
     generator_power=32,
 ):
     """U-Net Generator"""
-    # this model output range [-1, 1]. control by ResidualLastBlock's sigmiod activation
 
     # Image input
     input_img = Input(shape=input_img_shape)
@@ -42,7 +41,7 @@ def build_generator(
         kernel_size=KERNEL_SIZE,
         weight_decay=1e-4,
         strides=(1, 1),
-        activation="relu"
+        activation="leakyrelu"
     )
     fix_shape_layer_2 = residual_block(
         x=fix_shape_layer_1,
@@ -50,7 +49,7 @@ def build_generator(
         kernel_size=KERNEL_SIZE,
         weight_decay=1e-4,
         downsample=False,
-        activation="relu"
+        activation="leakyrelu"
     )
     down_sample_layers.append((fix_shape_layer_1, fix_shape_layer_2))
     # Downsampling
@@ -62,7 +61,7 @@ def build_generator(
             weight_decay=1e-4,
             downsample=True,
             use_pooling_layer=True,
-            activation="relu"
+            activation="leakyrelu"
         )
         fix_shape_layer_1 = residual_block(
             x=down_sample_layer,
@@ -70,7 +69,7 @@ def build_generator(
             kernel_size=KERNEL_SIZE,
             weight_decay=1e-4,
             downsample=False,
-            activation="tanh"
+            activation="leakyrelu"
         )
         fix_shape_layer_2 = residual_block(
             x=fix_shape_layer_1,
@@ -78,7 +77,7 @@ def build_generator(
             kernel_size=KERNEL_SIZE,
             weight_decay=1e-4,
             downsample=False,
-            activation="relu"
+            activation="leakyrelu"
         )
         layer_collection = (down_sample_layer,
                             fix_shape_layer_1, fix_shape_layer_2)
@@ -124,6 +123,110 @@ def build_generator(
         weight_decay=WEIGHT_DECAY,
         downsample=False,
         activation="sigmoid",
+        normalization=True
+    )
+    return Model(input_img, output_layer)
+
+
+def build_generator_non_unet(
+    input_img_shape,
+    output_channels=4,
+    depth=None,
+    generator_power=32,
+):
+    # Image input
+    input_img = Input(shape=input_img_shape)
+    input_img_noised = GaussianNoise(0.1)(input_img)
+
+    if depth is None:
+        img_size = input_img_shape[0]
+        depth = 0
+        while img_size != 1:
+            img_size //= 2
+            depth += 1
+        depth -= 3
+
+    fix_shape_layer_1 = conv2d_bn(
+        x=input_img_noised,
+        filters=generator_power,
+        kernel_size=KERNEL_SIZE,
+        weight_decay=1e-4,
+        strides=(1, 1),
+        activation="leakyrelu"
+    )
+    fix_shape_layer_2 = residual_block(
+        x=fix_shape_layer_1,
+        filters=generator_power,
+        kernel_size=KERNEL_SIZE,
+        weight_decay=1e-4,
+        downsample=False,
+        activation="leakyrelu"
+    )
+    # Downsampling
+    for depth_step in range(depth):
+        down_sample_layer = residual_block(
+            x=fix_shape_layer_2,
+            filters=generator_power * (2 ** depth_step),
+            kernel_size=KERNEL_SIZE,
+            weight_decay=1e-4,
+            downsample=True,
+            use_pooling_layer=True,
+            activation="leakyrelu"
+        )
+        fix_shape_layer_1 = residual_block(
+            x=down_sample_layer,
+            filters=generator_power * (2 ** depth_step),
+            kernel_size=KERNEL_SIZE,
+            weight_decay=1e-4,
+            downsample=False,
+            activation="leakyrelu"
+        )
+        fix_shape_layer_2 = residual_block(
+            x=fix_shape_layer_1,
+            filters=generator_power * (2 ** depth_step),
+            kernel_size=KERNEL_SIZE,
+            weight_decay=1e-4,
+            downsample=False,
+            activation="leakyrelu"
+        )
+    # upsampling
+    for depth_step in range(depth, 0, -1):
+        if depth_step == depth:
+            fix_shape_layer_1 = deconv2d_simple(
+                fix_shape_layer_2,
+                generator_power * (2 ** depth_step),
+                kernel_size=KERNEL_SIZE,
+                upsample=False,
+            )
+        else:
+            fix_shape_layer_1 = deconv2d_simple(
+                upsampling_layer,
+                generator_power * (2 ** depth_step),
+                kernel_size=KERNEL_SIZE,
+                upsample=False,
+            )
+        fix_shape_layer_2 = deconv2d_simple(
+            fix_shape_layer_1,
+            generator_power * (2 ** depth_step),
+            kernel_size=KERNEL_SIZE,
+            upsample=False,
+        )
+        upsampling_layer = deconv2d_simple(
+            fix_shape_layer_2,
+            generator_power * (2 ** (depth_step - 1)),
+            kernel_size=KERNEL_SIZE,
+            upsample=True,
+            use_upsampling_layer=False,
+        )
+    # control output_channels
+    output_layer = residual_block_last(
+        x=upsampling_layer,
+        filters=output_channels,
+        kernel_size=KERNEL_SIZE,
+        weight_decay=WEIGHT_DECAY,
+        downsample=False,
+        activation="sigmoid",
+        normalization=True
     )
     return Model(input_img, output_layer)
 
@@ -138,9 +241,9 @@ def build_discriminator(
     # this model output range [0, 1]. control by ResidualLastBlock's sigmiod activation
 
     original_img = Input(shape=input_img_shape)
-    man_or_model_mad_img = Input(shape=output_img_shape)
+    man_or_model_made_img = Input(shape=output_img_shape)
     # Concatenate image and conditioning image by channels to produce input
-    combined_imgs = Concatenate(axis=-1)([original_img, man_or_model_mad_img])
+    combined_imgs = Concatenate(axis=-1)([original_img, man_or_model_made_img])
 
     if depth is None:
         img_size = input_img_shape[0]
@@ -163,7 +266,7 @@ def build_discriminator(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
-            activation="relu"
+            activation="leakyrelu"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -171,7 +274,7 @@ def build_discriminator(
             kernel_size=KERNEL_SIZE,
             weight_decay=WEIGHT_DECAY,
             downsample=False,
-            activation="tanh"
+            activation="leakyrelu"
         )
         down_sampled_layer = residual_block(
             x=down_sampled_layer,
@@ -180,7 +283,7 @@ def build_discriminator(
             weight_decay=WEIGHT_DECAY,
             downsample=True,
             use_pooling_layer=False,
-            activation="relu"
+            activation="leakyrelu"
         )
 
     validity = residual_block_last(
@@ -192,7 +295,7 @@ def build_discriminator(
         activation="sigmoid"
     )
 
-    return Model([original_img, man_or_model_mad_img], validity)
+    return Model([original_img, man_or_model_made_img], validity)
 
 
 def build_classifier(

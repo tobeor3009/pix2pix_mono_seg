@@ -51,7 +51,8 @@ class DataLoader:
         self.loaded_data_object = self.__get_data_object()
 
     def get_data(self, data_mode, index=None):
-        data_tuple = self.__get_processed_imgs(data_mode=data_mode, index=index).values()
+        data_tuple = self.__get_processed_imgs(
+            data_mode=data_mode, index=index).values()
         return data_tuple
 
     def shuffle_train_imgs(self):
@@ -67,6 +68,9 @@ class DataLoader:
             self.image_file_paths["train"] = self.image_file_paths["train"][
                 self.data_index["train"]
             ]
+            self.mask_file_paths["train"] = self.mask_file_paths["train"][
+                self.data_index["train"]
+            ]
 
     def __get_data_object(self):
         if self.on_memory:
@@ -74,8 +78,10 @@ class DataLoader:
             dict_valid_data = self.__get_processed_imgs(data_mode="valid")
             return {"train": dict_train_data, "valid": dict_valid_data}
         else:
-            generator_train_data = self.__get_generator_of_processed_imgs(data_mode="train")
-            generator_valid_data = self.__get_generator_of_processed_imgs(data_mode="valid")
+            generator_train_data = self.__get_generator_of_processed_imgs(
+                data_mode="train")
+            generator_valid_data = self.__get_generator_of_processed_imgs(
+                data_mode="valid")
             return {"train": generator_train_data, "valid": generator_valid_data}
 
     # separate imgs and make png data range(-255,255) to (-1,1)
@@ -98,6 +104,8 @@ class DataLoader:
             *self.config_dict["img_shape"],
             self.config_dict["output_channels"],
         )
+
+        # this data type will redefined in batch_queue_manager
         input_image_list = np.empty(input_array_shape, dtype=np.float32)
         output_image_list = np.empty(output_array_shape, dtype=np.float32)
         for img_index, (image_path, mask_path) in enumerate(zip(image_paths, mask_paths)):
@@ -113,11 +121,13 @@ class DataLoader:
         image_paths = self.image_file_paths[data_mode]
         mask_paths = self.mask_file_paths[data_mode]
         while True:
-            for image_path, mask_path in zip(image_paths, mask_paths):
+            path_iter = zip(image_paths, mask_paths)
+            for image_path, mask_path in path_iter:
                 input_image = imread(image_path, channel="bgr")
                 output_image = imread(mask_path)
-                input_image = input_image / 127.5 - 1.0
-                output_image = np.round(output_image / 255)
+                # this data type will redefined in batch_queue_manager
+                input_image = (input_image / 127.5 - 1.0).astype(np.float32)
+                output_image = np.round(output_image / 255).astype(np.float32)
                 yield input_image, output_image
 
 

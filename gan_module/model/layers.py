@@ -12,6 +12,7 @@ from tensorflow.keras.layers import Dense, LeakyReLU
 from tensorflow.keras.activations import sigmoid, tanh
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.initializers import RandomNormal, HeNormal, GlorotNormal
+from tensorflow.python.keras.layers import normalization
 
 
 default_initializer = RandomNormal(mean=0.0, stddev=0.02)
@@ -32,7 +33,8 @@ def conv2d_bn(
     weight_decay=1e-2,
     strides=(1, 1),
     use_pooling_layer=False,
-    activation="relu"
+    activation="leakyrelu",
+    normalization=True
 ):
     if use_pooling_layer:
         cnn_strides = (1, 1)
@@ -40,11 +42,12 @@ def conv2d_bn(
     else:
         cnn_strides = strides
 
-    if activation == "relu":
+    if activation == "leakyrelu":
         kernel_initializer = RELU_INITIALIZER
     elif activation == "tanh":
         kernel_initializer = NON_LINEAR_INITIALIZER
-
+    else:
+        kernel_initializer = NON_LINEAR_INITIALIZER
     param_dict = {
         "kernel_size": kernel_size,
         "padding": "same",
@@ -53,11 +56,11 @@ def conv2d_bn(
         "kernel_initializer": kernel_initializer
     }
 
-    layer = Conv2D(filters=1, strides=1, **param_dict)(x)
     layer = Conv2D(filters=filters, strides=cnn_strides, **param_dict)(x)
-    layer = BatchNormalization(axis=-1)(layer)
+    if normalization:
+        layer = BatchNormalization(axis=-1)(layer)
 
-    if activation == "relu":
+    if activation == "leakyrelu":
         layer = LeakyReLU(NEGATIVE_RATIO)(layer)
     elif activation == "tanh":
         layer = tanh(layer)
@@ -78,7 +81,8 @@ def residual_block(
     weight_decay=0.0,
     downsample=True,
     use_pooling_layer=False,
-    activation="relu",
+    activation="leakyrelu",
+    normalization=True,
     Last=False
 ):
     if downsample:
@@ -86,9 +90,9 @@ def residual_block(
         residual = AveragePooling2D(
             pool_size=stride, strides=stride, padding="same")(x)
         residual = conv2d_bn(
-            residual, filters, kernel_size=1, strides=1, activation=activation
+            residual, filters, kernel_size=1, strides=1, activation=None
         )
-        transform_gate_output = transform_gate(residual, filters)
+
     else:
         stride = 1
         if Last:
@@ -97,11 +101,12 @@ def residual_block(
                 filters=filters,
                 kernel_size=3,
                 strides=1,
-                activation=activation
+                activation=None,
+                normalization=normalization,
             )
         else:
             residual = x
-        transform_gate_output = transform_gate(residual, filters)
+    transform_gate_output = transform_gate(residual, filters)
 
     conved = conv2d_bn(
         x=x,
@@ -110,7 +115,7 @@ def residual_block(
         weight_decay=weight_decay,
         strides=stride,
         use_pooling_layer=use_pooling_layer,
-        activation=activation
+        activation=None
     )
     conved = conv2d_bn(
         x=conved,
@@ -118,12 +123,77 @@ def residual_block(
         kernel_size=kernel_size,
         weight_decay=weight_decay,
         strides=1,
-        activation=activation
+        activation=None,
+        normalization=normalization,
     )
-    conved = BatchNormalization(
-        axis=-1, gamma_initializer=GAMMA_INITIALIZER)(conved)
-    conved = LeakyReLU(NEGATIVE_RATIO)(conved)
-    return conved * transform_gate_output + residual * (1 - transform_gate_output)
+
+    output = conved * transform_gate_output + \
+        residual * (1 - transform_gate_output)
+    if activation == "leakyrelu":
+        output = LeakyReLU(NEGATIVE_RATIO)(output)
+    elif activation == "tanh":
+        output = tanh(output)
+    return output
+
+
+# def residual_block(
+#     x,
+#     filters,
+#     kernel_size,
+#     weight_decay=0.0,
+#     downsample=True,
+#     use_pooling_layer=False,
+#     activation="leakyrelu",
+#     normalization=True,
+#     Last=False
+# ):
+#     if downsample:
+#         stride = 2
+#         residual = AveragePooling2D(
+#             pool_size=stride, strides=stride, padding="same")(x)
+#         residual = conv2d_bn(
+#             residual, filters, kernel_size=1, strides=1, activation=None
+#         )
+
+#     else:
+#         stride = 1
+#         if Last:
+#             residual = conv2d_bn(
+#                 x=x,
+#                 filters=filters,
+#                 kernel_size=3,
+#                 strides=1,
+#                 activation=None,
+#                 normalization=normalization,
+#             )
+#         else:
+#             residual = x
+
+#     conved = conv2d_bn(
+#         x=x,
+#         filters=filters,
+#         kernel_size=kernel_size,
+#         weight_decay=weight_decay,
+#         strides=stride,
+#         use_pooling_layer=use_pooling_layer,
+#         activation=None
+#     )
+#     conved = conv2d_bn(
+#         x=conved,
+#         filters=filters,
+#         kernel_size=kernel_size,
+#         weight_decay=weight_decay,
+#         strides=1,
+#         activation=None,
+#         normalization=normalization,
+#     )
+
+#     output = conved + residual
+#     if activation == "leakyrelu":
+#         output = LeakyReLU(NEGATIVE_RATIO)(output)
+#     elif activation == "tanh":
+#         output = tanh(output)
+#     return output
 
 
 def residual_block_last(
@@ -133,12 +203,15 @@ def residual_block_last(
     weight_decay=0.0,
     downsample=True,
     activation="sigmoid",
+    normalization=True
 ):
     output = residual_block(
-        x, filters, kernel_size, weight_decay, downsample, Last=True, activation="relu"
+        x, filters, kernel_size, weight_decay, downsample, Last=True,
+        activation=None, normalization=normalization
     )
     # use if you want output range [0,1]
     if activation == "sigmoid":
+        output = LeakyReLU(NEGATIVE_RATIO)(output)
         output = sigmoid(output)
     # use if you want output range [-1,1]
     elif activation == "tanh":
@@ -158,16 +231,9 @@ def deconv2d(
     """Layers used during upsampling"""
 
     strides = 2 if upsample else 1
-    skip_input_channel = skip_input.shape[-1]
     if use_upsampling_layer:
         layer_input = UpSampling2D(
-            size=strides, interpolation="nearest")(layer_input)
-        layer_input = conv2d_bn(
-            x=layer_input,
-            filters=filters,
-            kernel_size=kernel_size,
-            strides=1,
-        )
+            size=strides, interpolation="bilinear")(layer_input)
     else:
         layer_input = Conv2DTranspose(
             filters=filters,
@@ -179,20 +245,50 @@ def deconv2d(
             kernel_regularizer=l2(weight_decay),
             kernel_initializer=RELU_INITIALIZER
         )(layer_input)
-    layer_input = BatchNormalization(axis=-1)(layer_input)
-    layer_input = LeakyReLU(NEGATIVE_RATIO)(layer_input)
+        layer_input = BatchNormalization(axis=-1)(layer_input)
+        layer_input = LeakyReLU(NEGATIVE_RATIO)(layer_input)
     concatenated = Concatenate()([layer_input, skip_input])
-    transform_gate_output = transform_gate(
-        concatenated, filters + skip_input_channel)
     output = conv2d_bn(
         x=concatenated,
-        filters=filters + skip_input_channel,
+        filters=filters,
         kernel_size=kernel_size,
         strides=1,
     )
-    output = BatchNormalization(axis=-1)(output)
-    output = LeakyReLU(NEGATIVE_RATIO)(output)
-    return output * transform_gate_output + concatenated * (1 - transform_gate_output)
+    return output
+
+
+def deconv2d_simple(
+    layer_input,
+    filters,
+    kernel_size=3,
+    weight_decay=1e-2,
+    upsample=True,
+    use_upsampling_layer=False,
+):
+    """Layers used during upsampling"""
+
+    strides = 2 if upsample else 1
+    if use_upsampling_layer:
+        layer_input = UpSampling2D(
+            size=strides, interpolation="bilinear")(layer_input)
+    else:
+        layer_input = Conv2DTranspose(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding="same",
+            # Batch Normalization Beta replace Conv2D Bias
+            use_bias=False,
+            kernel_regularizer=l2(weight_decay),
+            kernel_initializer=RELU_INITIALIZER
+        )(layer_input)
+    output = conv2d_bn(
+        x=layer_input,
+        filters=filters,
+        kernel_size=kernel_size,
+        strides=1,
+    )
+    return output
 
 
 def transform_gate(x, highway_dim):
