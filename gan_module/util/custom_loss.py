@@ -30,61 +30,45 @@ def combined_loss(y_true, y_pred):
     return dice_loss(y_true, y_pred) + focal_loss(y_true, y_pred) + distribution_loss(y_true, y_pred)
 
 
-def weighted_region_loss(y_true, y_pred):
-
+def weighted_region_loss(y_true, y_pred, beta=0.7, smooth=SMOOTH):
     # y_pred = 1 - tf.math.cos(y_pred * PIE_VALUE / 2)
-
     tp = K.sum(y_true * y_pred, axis=AXIS)
     tn = K.sum((1 - y_true) * (1 - y_pred), axis=AXIS)
     fp = K.sum(y_pred, axis=AXIS) - tp
     fn = K.sum(y_true, axis=AXIS) - tp
 
-    mse_loss = tf.math.reduce_mean((y_true - y_pred) ** 2, axis=AXIS)
-
-    f1_loss_per_image = get_f1_loss_per_image(tp, tn, fp, fn)
+    f1_loss_per_image = get_f1_loss_per_image(
+        tp, tn, fp, fn, y_true, beta=beta, smooth=smooth)
     accuracy_loss_per_image = get_accuracy_loss_per_image(tp, tn, fp, fn)
-
+    mse_loss = tf.math.reduce_mean((y_true - y_pred) ** 2, axis=AXIS)
     total_loss_per_image = f1_loss_per_image + \
         accuracy_loss_per_image + mse_loss
+    # total_loss_per_image = f1_loss_per_image
 
     return K.mean(total_loss_per_image)
 
 
-def get_f1_loss_per_image(tp, fp, fn):
-
-    score = (2 * tp + SMOOTH) \
-        / (2 * tp + fn + fp + SMOOTH)
-
-    return -tf.math.log(score)
-
-
-def get_f1_loss_per_image(tp, tn, fp, fn, y_true, smooth=SMOOTH, beta=0.5):
-
+def get_f1_loss_per_image(tp, tn, fp, fn, y_true, beta=0.7, smooth=SMOOTH):
     alpha = 1 - beta
-    postive_ratio = tf.math.reduce_mean(y_true)
+    positive_ratio = K.mean(y_true, axis=AXIS)
 
     negative_score = (tn + smooth) \
-        / (tn + beta * fn + alpha * fp + smooth) * (smooth + 1 - postive_ratio)
+        / (tn + beta * fn + alpha * fp + smooth) * (smooth + 1 - positive_ratio)
     positive_score = (tp + smooth) \
-        / (tp + alpha * fn + beta * fp + smooth) * (smooth + postive_ratio)
-
+        / (tp + alpha * fn + beta * fp + smooth) * (smooth + positive_ratio)
     total_score = (negative_score + positive_score)
 
     return -tf.math.log(total_score)
 
 
-def get_f1_loss_per_image(tp, tn, fp, fn, smooth=SMOOTH, beta=0.7):
+class WeightedRegionLoss(Loss):
+    def __init__(self, beta=0.7, smooth=SMOOTH):
+        super().__init__(name='weighted_region_loss')
+        self.beta = beta
+        self.smooth = smooth
 
-    alpha = 1 - beta
-
-    negative_score = (tn + smooth) \
-        / (tn + alpha * fn + beta * fp + smooth) * 0.25
-    positive_score = (tp + smooth) \
-        / (tp + alpha * fn + beta * fp + smooth) * 0.75
-
-    total_score = (negative_score + positive_score)
-
-    return -tf.math.log(total_score)
+    def __call__(self, y_true, y_pred):
+        return weighted_region_loss(y_true, y_pred, beta=self.beta, smooth=self.smooth)
 
 
 def get_accuracy_loss_per_image(tp, tn, fp, fn):

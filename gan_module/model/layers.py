@@ -3,7 +3,7 @@
 
 import tensorflow as tf
 
-from tensorflow.keras import layers
+from tensorflow.keras.layers import Lambda
 from tensorflow.keras.layers import Concatenate
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose
 from tensorflow.keras.layers import MaxPooling2D, AveragePooling2D, UpSampling2D, Dropout
@@ -24,6 +24,10 @@ NEGATIVE_RATIO = 0.25
 # set to 0 this value will helpful for Early training
 GAMMA_INITIALIZER = "zeros"
 HIGHWAY_INIT_BIAS = -3
+SUBPIXEL_LAYER_SCLAE = 2
+
+# PixelShuffleLayer = Lambda(
+#     lambda x: tf.nn.depth_to_space(x, SUBPIXEL_LAYER_SCLAE))
 
 
 def conv2d_bn(
@@ -136,66 +140,6 @@ def residual_block(
     return output
 
 
-# def residual_block(
-#     x,
-#     filters,
-#     kernel_size,
-#     weight_decay=0.0,
-#     downsample=True,
-#     use_pooling_layer=False,
-#     activation="leakyrelu",
-#     normalization=True,
-#     Last=False
-# ):
-#     if downsample:
-#         stride = 2
-#         residual = AveragePooling2D(
-#             pool_size=stride, strides=stride, padding="same")(x)
-#         residual = conv2d_bn(
-#             residual, filters, kernel_size=1, strides=1, activation=None
-#         )
-
-#     else:
-#         stride = 1
-#         if Last:
-#             residual = conv2d_bn(
-#                 x=x,
-#                 filters=filters,
-#                 kernel_size=3,
-#                 strides=1,
-#                 activation=None,
-#                 normalization=normalization,
-#             )
-#         else:
-#             residual = x
-
-#     conved = conv2d_bn(
-#         x=x,
-#         filters=filters,
-#         kernel_size=kernel_size,
-#         weight_decay=weight_decay,
-#         strides=stride,
-#         use_pooling_layer=use_pooling_layer,
-#         activation=None
-#     )
-#     conved = conv2d_bn(
-#         x=conved,
-#         filters=filters,
-#         kernel_size=kernel_size,
-#         weight_decay=weight_decay,
-#         strides=1,
-#         activation=None,
-#         normalization=normalization,
-#     )
-
-#     output = conved + residual
-#     if activation == "leakyrelu":
-#         output = LeakyReLU(NEGATIVE_RATIO)(output)
-#     elif activation == "tanh":
-#         output = tanh(output)
-#     return output
-
-
 def residual_block_last(
     x,
     filters,
@@ -217,6 +161,41 @@ def residual_block_last(
     elif activation == "tanh":
         output = tanh(output)
     return output
+
+
+# def pixel_shuffle_block(
+#     x,
+#     filters,
+#     kernel_size,
+#     weight_decay=0.0,
+#     use_pooling_layer=False,
+#     normalization=True,
+# ):
+#     stride = 1
+
+#     conved_1 = conv2d_bn(
+#         x=x,
+#         filters=filters,
+#         kernel_size=kernel_size,
+#         weight_decay=weight_decay,
+#         strides=stride,
+#         use_pooling_layer=use_pooling_layer,
+#         activation=None,
+#         normalization=normalization,
+#     )
+#     conved_2 = conv2d_bn(
+#         x=conved_1,
+#         filters=filters,
+#         kernel_size=kernel_size,
+#         weight_decay=weight_decay,
+#         strides=stride,
+#         use_pooling_layer=use_pooling_layer,
+#         activation=None,
+#         normalization=normalization,
+#     )
+#     pixel_shuffled = PixelShuffleLayer(inputs=conved_2)
+
+#     return pixel_shuffled
 
 
 def deconv2d(
