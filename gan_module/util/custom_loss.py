@@ -50,12 +50,12 @@ def weighted_region_loss(y_true, y_pred, beta=0.7, smooth=SMOOTH):
 
 def get_f1_loss_per_image(tp, tn, fp, fn, y_true, beta=0.7, smooth=SMOOTH):
     alpha = 1 - beta
-    positive_ratio = K.mean(y_true, axis=AXIS)
+    prevalence = K.mean(y_true, axis=AXIS)
 
     negative_score = (tn + smooth) \
-        / (tn + beta * fn + alpha * fp + smooth) * (smooth + 1 - positive_ratio)
+        / (tn + beta * fn + alpha * fp + smooth) * (smooth + 1 - prevalence)
     positive_score = (tp + smooth) \
-        / (tp + alpha * fn + beta * fp + smooth) * (smooth + positive_ratio)
+        / (tp + alpha * fn + beta * fp + smooth) * (smooth + prevalence)
     total_score = (negative_score + positive_score)
 
     return -tf.math.log(total_score)
