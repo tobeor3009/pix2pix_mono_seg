@@ -7,23 +7,7 @@ import numpy as np
 import segmentation_models as sm
 from sklearn.utils import shuffle as syncron_shuffle
 
-
-def imread(path, channel=None):
-    image_byte_stream = open(path.encode("utf-8"), "rb")
-    image_byte_array = bytearray(image_byte_stream.read())
-    image_numpy_array = np.asarray(image_byte_array, dtype=np.uint8)
-    image_numpy_array = cv2.imdecode(
-        image_numpy_array, cv2.IMREAD_UNCHANGED)
-    if channel == "rgb":
-        image_numpy_array = cv2.cvtColor(
-            image_numpy_array, cv2.COLOR_BGR2RGB)
-    if len(image_numpy_array.shape) == 2:
-        image_numpy_array = np.expand_dims(image_numpy_array, axis=-1)
-    return image_numpy_array
-
-
-def get_parent_dir_name(path):
-    return path.split('/')[-2]
+from .utils import imread
 
 
 """
@@ -36,39 +20,6 @@ valid - image
 test  - image
       - mask
 """
-
-BACKBONE = "resnet34"
-
-
-def imread(path, channel=None):
-    image_byte_stream = open(path.encode("utf-8"), "rb")
-    image_byte_array = bytearray(image_byte_stream.read())
-    image_numpy_array = np.asarray(image_byte_array, dtype=np.uint8)
-    image_numpy_array = cv2.imdecode(
-        image_numpy_array, cv2.IMREAD_UNCHANGED)
-    if channel == "rgb":
-        image_numpy_array = cv2.cvtColor(
-            image_numpy_array, cv2.COLOR_BGR2RGB)
-    if len(image_numpy_array.shape) == 2:
-        image_numpy_array = np.expand_dims(image_numpy_array, axis=-1)
-    return image_numpy_array
-
-
-def get_parent_dir_name(path):
-    return path.split('/')[-2]
-
-
-"""
-Expect Data Path Structure
-
-train - image
-      - mask
-valid - image
-      - mask
-test  - image
-      - mask
-"""
-
 BACKBONE = "resnet34"
 
 
@@ -87,16 +38,16 @@ class SegDataGetter():
         image_path = self.image_path_list[i]
         mask_path = self.mask_path_list[i]
 
-        image = imread(image_path, channel="rgb")
-        mask = imread(mask_path)
+        image_array = imread(image_path, channel="rgb")
+        mask_array = imread(mask_path)
 
         # normalize image: [0, 255] => [-1, 1]
         # normalize mask: [0, 255] => [0, 1]
-        image = (image / 127.5) - 1
-        image = self.preprocess_input(image)
-        mask = (mask / 255)
+        image_array = (image_array / 127.5) - 1
+        image_array = self.preprocess_input(image_array)
+        mask_array = (mask_array / 255)
 
-        return image, mask
+        return image_array, mask_array
 
     def __len__(self):
         return len(self.image_path_list)
@@ -137,7 +88,6 @@ class SegDataloader(tf.keras.utils.Sequence):
             data = self.data_getter[total_index]
             batch_x[batch_index] = data[0]
             batch_y[batch_index] = data[1]
-        batch_y = np.array(batch_y)
 
         return batch_x, batch_y
 
@@ -162,14 +112,14 @@ class SegSingleDataGetter():
     def __getitem__(self, i):
         image_path = self.image_path_list[i]
         if self.preprocess:
-            image = imread(image_path, channel="rgb")
-            image = (image / 127.5) - 1
-            image = self.preprocess_input(image)
+            image_array = imread(image_path, channel="rgb")
+            image_array = (image_array / 127.5) - 1
+            image_array = self.preprocess_input(image_array)
+            return image_array
         else:
-            image = imread(image_path)
-            image = (image / 2)
-
-        return image
+            mask_array = imread(image_path)
+            mask_array = (mask_array / 255)
+            return mask_array
 
     def __len__(self):
         return len(self.image_path_list)
