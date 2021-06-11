@@ -47,7 +47,18 @@ class ClassifyDataGetter:
         return len(self.image_path_list)
 
     def shuffle(self):
-        syncron_shuffle(self.image_path_list)
+        self.image_path_list = syncron_shuffle(self.image_path_list)
+
+    def check_label_status(self):
+        data_len = self.__len__()
+        for index in range(data_len):
+            image_path = self.image_path_list[index]
+            image_dir_name = get_parent_dir_name(image_path)
+            label = self.label_to_index_dict[image_dir_name]
+            print(image_path)
+            print(label)
+            print(tf.keras.utils.to_categorical(
+                label, num_classes=self.num_classes))
 
 
 class ClassifyDataloader(tf.keras.utils.Sequence):
@@ -73,6 +84,82 @@ class ClassifyDataloader(tf.keras.utils.Sequence):
 
         batch_x = np.empty((self.batch_size, *self.source_data_shape))
         batch_y = np.empty((self.batch_size, self.num_classes))
+        for batch_index, total_index in enumerate(range(start, end)):
+            data = self.data_getter[total_index]
+            batch_x[batch_index] = data[0]
+            batch_y[batch_index] = data[1]
+
+        return batch_x, batch_y
+
+    def __len__(self):
+        """Denotes the number of batches per epoch"""
+        return len(self.data_getter) // self.batch_size
+
+    def on_epoch_end(self):
+        if self.shuffle:
+            self.data_getter.shuffle()
+
+
+class BinaryClassifyDataGetter:
+
+    def __init__(self,
+                 image_path_list=None,
+                 label_to_index_dict=None):
+        self.image_path_list = image_path_list
+        self.label_to_index_dict = label_to_index_dict
+        self.num_classes = len(self.label_to_index_dict)
+        assert self.num_classes == 2, f"label_to_index_dict: {label_to_index_dict}"
+
+    def __getitem__(self, i):
+        image_path = self.image_path_list[i]
+        image_dir_name = get_parent_dir_name(image_path)
+
+        image = imread(image_path, channel="rgb")
+        image = (image / 127.5) - 1
+
+        label = self.label_to_index_dict[image_dir_name]
+        return image, label
+
+    def __len__(self):
+        return len(self.image_path_list)
+
+    def shuffle(self):
+        self.image_path_list = syncron_shuffle(self.image_path_list)
+
+    def check_label_status(self):
+        data_len = self.__len__()
+        for index in range(data_len):
+            image_path = self.image_path_list[index]
+            image_dir_name = get_parent_dir_name(image_path)
+            label = self.label_to_index_dict[image_dir_name]
+            print(image_path)
+            print(image_dir_name)
+            print(label)
+
+
+class BinaryClassifyDataloader(tf.keras.utils.Sequence):
+
+    def __init__(self,
+                 image_path_list=None,
+                 label_to_index_dict=None,
+                 batch_size=None,
+                 shuffle=True):
+        self.data_getter = BinaryClassifyDataGetter(image_path_list=image_path_list,
+                                                    label_to_index_dict=label_to_index_dict,
+                                                    )
+        self.batch_size = batch_size
+        self.num_classes = len(label_to_index_dict)
+        self.source_data_shape = self.data_getter[0][0].shape
+        self.shuffle = shuffle
+        self.on_epoch_end()
+
+    def __getitem__(self, i):
+
+        start = i * self.batch_size
+        end = start + self.batch_size
+
+        batch_x = np.empty((self.batch_size, *self.source_data_shape))
+        batch_y = np.empty((self.batch_size,))
         for batch_index, total_index in enumerate(range(start, end)):
             data = self.data_getter[total_index]
             batch_x[batch_index] = data[0]
