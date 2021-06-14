@@ -2,6 +2,7 @@
 
 # external module
 import tensorflow as tf
+import cv2
 import numpy as np
 from sklearn.utils import shuffle as syncron_shuffle
 
@@ -25,22 +26,35 @@ label_dict = {"non_tumor":0, "tumor":1}
 class ClassifyDataGetter:
 
     def __init__(self,
-                 image_path_list=None,
-                 label_to_index_dict=None):
+                 image_path_list,
+                 label_to_index_dict,
+                 preprocess_input,
+                 target_size,
+                 interpolation):
         self.image_path_list = image_path_list
         self.label_to_index_dict = label_to_index_dict
         self.num_classes = len(self.label_to_index_dict)
+        self.preprocess_input = preprocess_input
+        self.target_size = target_size
+        self.interpolation = interpolation
 
     def __getitem__(self, i):
         image_path = self.image_path_list[i]
         image_dir_name = get_parent_dir_name(image_path)
 
         image = imread(image_path, channel="rgb")
-        image = (image / 127.5) - 1
+        if self.interpolation == "bilinear":
+            image = cv2.resize(image, self.target_size, cv2.INTER_LINEAR)
+
+        if self.preprocess_input:
+            image = self.preprocess_input(image)
+        else:
+            image = (image / 127.5) - 1
 
         label = self.label_to_index_dict[image_dir_name]
         label = tf.keras.utils.to_categorical(
             label, num_classes=self.num_classes)
+
         return image, label
 
     def __len__(self):
@@ -67,14 +81,26 @@ class ClassifyDataloader(tf.keras.utils.Sequence):
                  image_path_list=None,
                  label_to_index_dict=None,
                  batch_size=None,
-                 shuffle=True):
+                 preprocess_input=None,
+                 target_size=None,
+                 interpolation="bilinear",
+                 shuffle=True,
+                 dtype="float32"):
         self.data_getter = ClassifyDataGetter(image_path_list=image_path_list,
                                               label_to_index_dict=label_to_index_dict,
+                                              preprocess_input=preprocess_input,
+                                              target_size=target_size,
+                                              interpolation=interpolation
                                               )
         self.batch_size = batch_size
         self.num_classes = len(label_to_index_dict)
         self.source_data_shape = self.data_getter[0][0].shape
+        if target_size is None:
+            target_size = self.source_data_shape[:2]
+            self.data_getter.target_size = target_size
+            self.source_data_shape[:2] = target_size
         self.shuffle = shuffle
+        self.dtype = dtype
         self.on_epoch_end()
 
     def __getitem__(self, i):
@@ -82,8 +108,10 @@ class ClassifyDataloader(tf.keras.utils.Sequence):
         start = i * self.batch_size
         end = start + self.batch_size
 
-        batch_x = np.empty((self.batch_size, *self.source_data_shape))
-        batch_y = np.empty((self.batch_size, self.num_classes))
+        batch_x = np.empty(
+            (self.batch_size, *self.source_data_shape), dtype=self.dtype)
+        batch_y = np.empty(
+            (self.batch_size, self.num_classes), dtype=self.dtype)
         for batch_index, total_index in enumerate(range(start, end)):
             data = self.data_getter[total_index]
             batch_x[batch_index] = data[0]
@@ -103,11 +131,18 @@ class ClassifyDataloader(tf.keras.utils.Sequence):
 class BinaryClassifyDataGetter:
 
     def __init__(self,
-                 image_path_list=None,
-                 label_to_index_dict=None):
+                 image_path_list,
+                 label_to_index_dict,
+                 preprocess_input,
+                 target_size,
+                 interpolation):
         self.image_path_list = image_path_list
         self.label_to_index_dict = label_to_index_dict
         self.num_classes = len(self.label_to_index_dict)
+        self.preprocess_input = preprocess_input
+        self.target_size = target_size
+        self.interpolation = interpolation
+
         assert self.num_classes == 2, f"label_to_index_dict: {label_to_index_dict}"
 
     def __getitem__(self, i):
@@ -115,7 +150,13 @@ class BinaryClassifyDataGetter:
         image_dir_name = get_parent_dir_name(image_path)
 
         image = imread(image_path, channel="rgb")
-        image = (image / 127.5) - 1
+        if self.interpolation == "bilinear":
+            image = cv2.resize(image, self.target_size, cv2.INTER_LINEAR)
+
+        if self.preprocess_input:
+            image = self.preprocess_input(image)
+        else:
+            image = (image / 127.5) - 1
 
         label = self.label_to_index_dict[image_dir_name]
         return image, label
@@ -143,14 +184,26 @@ class BinaryClassifyDataloader(tf.keras.utils.Sequence):
                  image_path_list=None,
                  label_to_index_dict=None,
                  batch_size=None,
-                 shuffle=True):
+                 preprocess_input=None,
+                 target_size=None,
+                 interpolation="bilinear",
+                 shuffle=True,
+                 dtype="float32"):
         self.data_getter = BinaryClassifyDataGetter(image_path_list=image_path_list,
                                                     label_to_index_dict=label_to_index_dict,
+                                                    preprocess_input=preprocess_input,
+                                                    target_size=target_size,
+                                                    interpolation=interpolation
                                                     )
         self.batch_size = batch_size
         self.num_classes = len(label_to_index_dict)
         self.source_data_shape = self.data_getter[0][0].shape
+        if target_size is None:
+            target_size = self.source_data_shape[:2]
+            self.data_getter.target_size = target_size
+            self.source_data_shape[:2] = target_size
         self.shuffle = shuffle
+        self.dtype = dtype
         self.on_epoch_end()
 
     def __getitem__(self, i):
@@ -158,8 +211,8 @@ class BinaryClassifyDataloader(tf.keras.utils.Sequence):
         start = i * self.batch_size
         end = start + self.batch_size
 
-        batch_x = np.empty((self.batch_size, *self.source_data_shape))
-        batch_y = np.empty((self.batch_size,))
+        batch_x = np.empty((self.batch_size, *self.source_data_shape), self.dtype)
+        batch_y = np.empty((self.batch_size,), self.dtype)
         for batch_index, total_index in enumerate(range(start, end)):
             data = self.data_getter[total_index]
             batch_x[batch_index] = data[0]
